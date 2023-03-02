@@ -1,0 +1,8 @@
+This is not a code modification. This is a patch for asset files.
+The binary was created with UABE.
+The patch replaces 12 sprite atlases for common enemies.
+These atlases were erroneously broken when the game was updated to 1.1.
+This patch restores the original atlases.
+The only difference between the two versions were the parts that were broken.
+There ARE other misaligned atlases within these 12 and several other sprite sheets.
+These misalignments do not show up in the game for reasons I never explored.
