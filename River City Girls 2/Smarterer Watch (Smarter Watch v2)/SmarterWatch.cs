@@ -41,6 +41,11 @@ namespace RCG2Mods
         }
         #endregion
 
+        #region Functions
+        /// <summary>
+        /// Equips the watch while in the store.
+        /// </summary>
+        /// <param name="iter">Main SimulationIterator</param>
         static internal void EquipAfterBuy(SimulationIteration iter)
         {
             // Get the active players.
@@ -62,6 +67,10 @@ namespace RCG2Mods
             SaveBoughtOn = null;
         }
 
+        /// <summary>
+        /// Makes equipment changes on entering the store.
+        /// </summary>
+        /// <param name="iter">Main SimulationIterator</param>
         static internal void Equip(SimulationIteration iter)
         {
             // Stores the equipment worn on entering the store.
@@ -91,6 +100,10 @@ namespace RCG2Mods
             }
         }
 
+        /// <summary>
+        /// Equips the equipment that was worn when entering the store.
+        /// </summary>
+        /// <param name="iter">Main SimulatorIterator</param>
         static internal void Unequip(SimulationIteration iter)
         {
             var players = new List<PlayerControllerEntity>();
@@ -103,7 +116,8 @@ namespace RCG2Mods
                 players[i].SetEquipment(0, SmarterWatch.EquipedItems[i].Slot1, iter);
                 players[i].SetEquipment(1, SmarterWatch.EquipedItems[i].Slot2, iter);
             }
-        }
+        } 
+        #endregion
     } 
     #endregion
 
