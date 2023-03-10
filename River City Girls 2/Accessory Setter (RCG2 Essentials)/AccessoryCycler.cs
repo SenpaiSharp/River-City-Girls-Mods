@@ -208,7 +208,7 @@ namespace RCG2Mods
             { Accesories.False_Lashes , -248285514 },
             { Accesories.Fishnet_Top , -1208443992 },
             { Accesories.Frilly_Bottom , 1810095161 },
-            { Accesories.Frilly_Bra , 1810095161 },
+            { Accesories.Frilly_Bra , 1206450084 },
             { Accesories.Frost_Sigil , -45505303 },
             { Accesories.Gamer_Guide , -62252525 },
             { Accesories.Glass_Mouthgaurd , -347800326 },
@@ -320,7 +320,7 @@ namespace RCG2Mods
             int playerId = player.LocalID;
             PlayerEntity entity = player.Player as PlayerEntity;
             CategorySet category;
-
+            
             if (perPlayer)
             {
                 switch (playerId)
@@ -370,7 +370,7 @@ namespace RCG2Mods
         /// <param name="accessory1">Slot 1 Accessory</param>
         /// <param name="accessory2">Slot 2 Accessory</param>
         private static void Cycle(SimulationIteration iter, PlayerControllerEntity player, CategorySet category, int index, out Accesories accessory1, out Accesories accessory2)
-        {
+        {   
             // Get our SaveSlot Inventory
             SingletonHashedInventory inventory = player.SaveSlot.m_data.m_singletonInventory;
 
@@ -389,6 +389,10 @@ namespace RCG2Mods
             // Determine if we have those accessories or use them anyway if being forced to.
             slot1hash = (force.Value || inventory.Contains(slot1hash)) ? slot1hash : 0;
             slot2hash = (force.Value || inventory.Contains(slot2hash)) ? slot2hash : 0;
+
+            // Set our out going accessories to Empty if necessary.
+            if (slot1hash == 0) accessory1 = Accesories.Empty;
+            if (slot2hash == 0) accessory2 = Accesories.Empty;
 
             // Set
             player.SetEquipment(0, slot1hash, iter);

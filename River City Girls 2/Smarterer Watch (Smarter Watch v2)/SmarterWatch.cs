@@ -22,13 +22,6 @@ namespace RCG2Mods
         internal const int MusicPlayerHash = 945610029;
         #endregion
 
-        #region Finalize Bools
-        //TODO: May replace these with an event system, some day. Mixed feelings.
-        static internal bool JustBoughtWatch = false;
-        static internal bool SwapNextFinalize = false;
-        static internal bool ReverseSwapNextFinalize = false;
-        #endregion
-
         #region Player Fields
         static internal List<(int Slot1, int Slot2)> EquipedItems;
         static internal SaveSlotEntity SaveBoughtOn;
@@ -39,7 +32,7 @@ namespace RCG2Mods
         static internal MelonPreferences_Entry<bool> IncludeMusicPlayer;
         public override void OnInitializeMelon()
         {
-            prefCategory = MelonPreferences.CreateCategory("Smarter Watch");
+            prefCategory = MelonPreferences.CreateCategory("SmarterWatch");
             prefCategory.SetFilePath("UserData/SmarterWatch.cfg");
             IncludeMusicPlayer = prefCategory.CreateEntry<bool>(
                 identifier: "EquipMusicPlayer",
@@ -47,6 +40,70 @@ namespace RCG2Mods
                 display_name: "Equip Music Player on store visits?");
         }
         #endregion
+
+        static internal void EquipAfterBuy(SimulationIteration iter)
+        {
+            // Get the active players.
+            var players = new List<PlayerControllerEntity>();
+            iter.GetEntities<PlayerControllerEntity>(players);
+
+            // Check each player to see if they are part of the Save Slot that bought the watch.
+            // They might not be if this is used online. If it even works online!
+            //TODO: Find out if this works online.
+            for (int i = 0; i < players.Count; i++)
+            {
+                if (SaveBoughtOn == players[i].SaveSlot)
+                {
+                    // Put the Watch in the first slot.
+                    players[i].SetEquipment(0, SmartWatchHash, iter);
+                }
+            }
+            // No longer needed, null just to be safe since it's a static field that.  
+            SaveBoughtOn = null;
+        }
+
+        static internal void Equip(SimulationIteration iter)
+        {
+            // Stores the equipment worn on entering the store.
+            SmarterWatch.EquipedItems = new List<(int Slot1, int Slot2)>();
+
+            var players = new List<PlayerControllerEntity>();
+            iter.GetEntities<PlayerControllerEntity>(players);
+
+            for (int i = 0; i < players.Count; i++)
+            {
+                var playerData = players[i].m_playerData;
+
+                // Record each player's equipment. We store everybody to keep things simple with the list iterations.
+                EquipedItems.Add((playerData.m_equipmentOne, playerData.m_equipmentTwo));
+
+                // We set either the Smart Watch/Music Player or empty each slot.
+                // This keeps things simple and ensures we don't end up with edge cases where two of the same items end up equiped.
+                var inventory = players[i].SaveSlot.m_data.m_singletonInventory;
+
+                int firstSlot = inventory.Contains(SmarterWatch.SmartWatchHash) ? SmarterWatch.SmartWatchHash : 0;
+                bool useMusicPlayer = (SmarterWatch.IncludeMusicPlayer.Value && inventory.Contains(SmarterWatch.MusicPlayerHash));
+                int secondSlot = useMusicPlayer ? SmarterWatch.MusicPlayerHash : 0;
+
+                // Set
+                players[i].SetEquipment(0, firstSlot, iter);
+                players[i].SetEquipment(1, secondSlot, iter);
+            }
+        }
+
+        static internal void Unequip(SimulationIteration iter)
+        {
+            var players = new List<PlayerControllerEntity>();
+
+            iter.GetEntities<PlayerControllerEntity>(players);
+
+            // Reequip what each player had on entering the store.
+            for (int i = 0; i < players.Count; i++)
+            {
+                players[i].SetEquipment(0, SmarterWatch.EquipedItems[i].Slot1, iter);
+                players[i].SetEquipment(1, SmarterWatch.EquipedItems[i].Slot2, iter);
+            }
+        }
     } 
     #endregion
 
@@ -75,7 +132,7 @@ namespace RCG2Mods
 
             if (__instance.NameHash == SmarterWatch.SmartWatchHash)
             {
-                SmarterWatch.JustBoughtWatch = true;
+                PreFinalizerHook.Subscribe(SmarterWatch.EquipAfterBuy);
 
                 // Get the save slot of the current player, this might (as in, I don't know) factor into online play.
                 var player = ent.Controller as PlayerControllerEntity;
@@ -100,7 +157,7 @@ namespace RCG2Mods
         /// <returns>Always returns true.</returns>
         static bool Prefix()
         {
-            SmarterWatch.SwapNextFinalize = true;
+            PreFinalizerHook.Subscribe(SmarterWatch.Equip);
             return true;
         }
     }
@@ -118,115 +175,11 @@ namespace RCG2Mods
         /// <returns>Always returns true.</returns>
         static bool Prefix()
         {
-            SmarterWatch.ReverseSwapNextFinalize = true;
+            PreFinalizerHook.Subscribe(SmarterWatch.Unequip);
             return true;
         }
     }
 
-    /// <summary>
-    /// Harmony SimulationIteration.Finalize Patch that swaps Accessories in and out just before the main BinaryPacket is written.
-    /// </summary>
-    [HarmonyPatch(typeof(SimulationIteration))]
-    [HarmonyPatch("Finalize", typeof(BinaryPacket))]
-    internal class FinalizePatch1
-    {
-        /// <summary>
-        /// Will catch the MainSimulation iterator and runs code on possible conditions of the Smart Watch/Music Player.
-        /// </summary>
-        /// <param name="__instance">the MainSimulation iterator</param>
-        /// <returns>Always returns true.</returns>
-        static bool Prefix(SimulationIteration __instance)
-        {
-            #region If the watch was bought during this store session.
-            if (SmarterWatch.JustBoughtWatch)
-            {
-                // Make sure this is m_iterator
-                if (__instance.IterationTag == "MainSimulation")
-                {
-                    // Set this so not run more than once.
-                    SmarterWatch.JustBoughtWatch = false;
-
-                    // Get the active players.
-                    var players = new List<PlayerControllerEntity>();
-                    __instance.GetEntities<PlayerControllerEntity>(players);
-
-                    // Check each player to see if they are part of the Save Slot that bought the watch.
-                    // They might not be if this is used online. If it even works online!
-                    //TODO: Find out if this works online.
-                    for (int i = 0; i < players.Count; i++)
-                    {
-                        if (SmarterWatch.SaveBoughtOn == players[i].SaveSlot)
-                        {
-                            // Put the Watch in the first slot.
-                            players[i].SetEquipment(0, SmarterWatch.SmartWatchHash, __instance);
-                        }
-                    }
-
-                    // No longer needed, null just to be safe since it's a static field that .
-                    SmarterWatch.SaveBoughtOn = null;
-                }
-            }
-            #endregion
-
-            #region If the Smart Watch/Music Player are owned when entering the store.
-            if (SmarterWatch.SwapNextFinalize)
-            {
-                if (__instance.IterationTag == "MainSimulation")
-                {
-                    SmarterWatch.SwapNextFinalize = false;
-
-                    // Stores the equipment worn on entering the store.
-                    SmarterWatch.EquipedItems = new List<(int Slot1, int Slot2)>();
-
-                    var players = new List<PlayerControllerEntity>();
-                    __instance.GetEntities<PlayerControllerEntity>(players);
-
-                    for (int i = 0; i < players.Count; i++)
-                    {
-                        var playerData = players[i].m_playerData;
-
-                        // Record each player's equipment. We store everybody to keep things simple with the list iterations.
-                        SmarterWatch.EquipedItems.Add((playerData.m_equipmentOne, playerData.m_equipmentTwo));
-
-                        // We set either the Smart Watch/Music Player or empty each slot.
-                        // This keeps things simple and ensures we don't end up with edge cases where two of the same items end up equiped.
-                        var inventory = players[i].SaveSlot.m_data.m_singletonInventory;
-                        int firstSlot = inventory.Contains(SmarterWatch.SmartWatchHash) ? SmarterWatch.SmartWatchHash : 0;
-                        bool useMusicPlayer = (SmarterWatch.IncludeMusicPlayer.Value && inventory.Contains(SmarterWatch.MusicPlayerHash));
-                        int secondSlot = useMusicPlayer ? SmarterWatch.MusicPlayerHash : 0;
-
-                        // Set
-                        players[i].SetEquipment(0, firstSlot, __instance);
-                        players[i].SetEquipment(1, secondSlot, __instance);
-                    }
-                }
-            }
-            #endregion
-
-            #region If the player is leaving the store.
-            else if (SmarterWatch.ReverseSwapNextFinalize)
-            {
-                if (__instance.IterationTag == "MainSimulation")
-                {
-                    SmarterWatch.ReverseSwapNextFinalize = false;
-
-                    var players = new List<PlayerControllerEntity>();
-
-                    __instance.GetEntities<PlayerControllerEntity>(players);
-
-                    // Reequip what each player had on entering the store.
-                    for (int i = 0; i < players.Count; i++)
-                    {
-                        players[i].SetEquipment(0, SmarterWatch.EquipedItems[i].Slot1, __instance);
-                        players[i].SetEquipment(1, SmarterWatch.EquipedItems[i].Slot2, __instance);
-                    }
-                }
-            }
-            #endregion
-
-            // Continue to the main method and hope this sticks!
-            return true;
-        }
-    } 
+  
     #endregion
 }
