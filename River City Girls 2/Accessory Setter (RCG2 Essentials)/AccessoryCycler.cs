@@ -83,7 +83,6 @@ namespace RCG2Mods
                     {
                         return string.Empty;
                     }
-
                 default:
                     {
                         return accessory.ToString().Replace("_", " ");
@@ -128,7 +127,6 @@ namespace RCG2Mods
                 CreateEntrySet(i + 1);
             }
         }
- 
 
         /// <summary>
         /// Creates Set Pair entry options.
@@ -245,64 +243,75 @@ namespace RCG2Mods
             { Accesories.Wool_Socks , 225808166 },
             { Accesories.Wrestling_Singlet , 655791321 }
         };
+
+        /// <summary>
+        /// Check for Intialization, which only needs to run once.
+        /// </summary>
+        private static bool Initialized;
         #endregion
 
         #region Initializer
         static public void Initialize()
         {
-            // Create the main category.
-            mainCategory = MelonPreferences.CreateCategory("AccessorySetter");
-            mainCategory.SetFilePath("UserData/AccessorySetter.cfg");
-
-            // Set up our options.
-            force = mainCategory.CreateEntry<bool>(
-                identifier: "ForceAccessoryEquip",
-                default_value: true,
-                display_name: "Force Accesories to equip, even if not owned or doubled up?");
-
-            showText = mainCategory.CreateEntry(
-                identifier: "ShowAnimatedText",
-                default_value: true,
-                display_name: "Show text on player when equipping?");
-
-            textColor = mainCategory.CreateEntry(
-                identifier: "EquippTextColor",
-                default_value: Color.yellow,
-                display_name: "Equipped Text Color");
-
-            perPlayerSets = mainCategory.CreateEntry<bool>(
-                identifier: "PerPlayerSets",
-                default_value: false,
-                display_name: "Use Per-Player Sets? (Requires Restart)");
-
-            // Advanced Options
-            textSize = mainCategory.CreateEntry<float>(
-                identifier: "TextSize",
-                default_value: 40f,
-                display_name: "Text Size",
-                is_hidden: true)
-                as MelonPreferences_Entry<float>;
-
-            boxSize = mainCategory.CreateEntry<float>(
-                identifier: "TextBoxSize",
-                default_value: 2f,
-                display_name: "Text Bounding Box Size (Try adjusting for better formatting)",
-                is_hidden: true)
-                as MelonPreferences_Entry<float>;
-
-            // Set this once, so regardless if the preference is changed, this stays set all session. Require a reboot.
-            perPlayer = perPlayerSets.Value;
-
-            if (perPlayer)
+            if (Initialized)
             {
-                defaultSet = new CategorySet(1);
-                player2Set = new CategorySet(2);
-                player3Set = new CategorySet(3);
-                player4set = new CategorySet(4);
-            }
-            else
-            {
-                defaultSet = new CategorySet(0);
+                // To not run this more than once.
+                Initialized = true;
+
+                // Create the main category.
+                mainCategory = MelonPreferences.CreateCategory("AccessorySetter");
+                mainCategory.SetFilePath("UserData/AccessorySetter.cfg");
+
+                // Set up our options.
+                force = mainCategory.CreateEntry<bool>(
+                    identifier: "ForceAccessoryEquip",
+                    default_value: true,
+                    display_name: "Force Accesories to equip, even if not owned or doubled up?");
+
+                showText = mainCategory.CreateEntry(
+                    identifier: "ShowAnimatedText",
+                    default_value: true,
+                    display_name: "Show text on player when equipping?");
+
+                textColor = mainCategory.CreateEntry(
+                    identifier: "EquippTextColor",
+                    default_value: Color.yellow,
+                    display_name: "Equipped Text Color");
+
+                perPlayerSets = mainCategory.CreateEntry<bool>(
+                    identifier: "PerPlayerSets",
+                    default_value: false,
+                    display_name: "Use Per-Player Sets? (Requires Restart)");
+
+                // Advanced Options
+                textSize = mainCategory.CreateEntry<float>(
+                    identifier: "TextSize",
+                    default_value: 40f,
+                    display_name: "Text Size",
+                    is_hidden: true)
+                    as MelonPreferences_Entry<float>;
+
+                boxSize = mainCategory.CreateEntry<float>(
+                    identifier: "TextBoxSize",
+                    default_value: 2f,
+                    display_name: "Text Bounding Box Size (Try adjusting for better formatting)",
+                    is_hidden: true)
+                    as MelonPreferences_Entry<float>;
+
+                // Set this once, so regardless if the preference is changed, this stays set all session. Require a reboot.
+                perPlayer = perPlayerSets.Value;
+
+                if (perPlayer)
+                {
+                    defaultSet = new CategorySet(1);
+                    player2Set = new CategorySet(2);
+                    player3Set = new CategorySet(3);
+                    player4set = new CategorySet(4);
+                }
+                else
+                {
+                    defaultSet = new CategorySet(0);
+                } 
             }
         }
         #endregion
