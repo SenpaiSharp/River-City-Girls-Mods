@@ -253,7 +253,7 @@ namespace RCG2Mods
         #region Initializer
         static public void Initialize()
         {
-            if (Initialized)
+            if (!Initialized)
             {
                 // To not run this more than once.
                 Initialized = true;
