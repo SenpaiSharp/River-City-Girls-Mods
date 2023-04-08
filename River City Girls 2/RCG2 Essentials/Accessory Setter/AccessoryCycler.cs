@@ -325,7 +325,7 @@ namespace RCG2Mods
         /// </summary>
         /// <param name="iter">Main SimulationIterator</param>
         /// <param name="player">Player we are cycling.</param>
-        static public void CyclePlayerAccessories(SimulationIteration iter, PlayerControllerEntity player)
+        static public void CyclePlayerAccessories(SimulationIteration iter, PlayerControllerEntity player, bool reverse = false)
         {
             // Figure out what player we're using.
 
@@ -349,12 +349,25 @@ namespace RCG2Mods
             }
 
             // Advance our player's index, reset if necessary
-            SetIndexes[playerId]++;
-
-            if (SetIndexes[playerId] > defaultSet.setCount.Value)
+            if (!reverse)
             {
-                // We use 1 because this info gets passed to the person playing and starting with 0 probably feel weird to them.
-                SetIndexes[playerId] = 1;
+                SetIndexes[playerId]++;
+
+                if (SetIndexes[playerId] > defaultSet.setCount.Value)
+                {
+                    // We use 1 because this info gets passed to the person playing and starting with 0 probably feel weird to them.
+                    SetIndexes[playerId] = 1;
+                } 
+            }
+            else
+            {
+                SetIndexes[playerId]--;
+
+                if (SetIndexes[playerId] <= 0)
+                {
+                    // We use 1 because this info gets passed to the person playing and starting with 0 probably feel weird to them.
+                    SetIndexes[playerId] = SetIndexes.Length -1;
+                }
             }
 
             int index = SetIndexes[playerId];
