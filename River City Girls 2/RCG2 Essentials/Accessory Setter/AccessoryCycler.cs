@@ -139,12 +139,14 @@ namespace RCG2Mods
             string identifier2 = string.Format("Set{0}Slot{1}", setNumber, 2);
             string identifierTextOverride = string.Format("Set{0}TextOverride", setNumber);
             string identifierColorOverride = string.Format("Set{0}ColorOverride", setNumber);
+            string identifierPaletteSwitch = string.Format("Set{0}SwitchPalette", setNumber);
 
             string display1 = string.Format("Set: {0} Slot: {1}", setNumber, 1);
             string display2 = string.Format("Set: {0} Slot: {1}", setNumber, 2);
             string displayIdentifierTextOverride = string.Format("Set {0} Text Override", setNumber);
             string displayColorOverride = string.Format("Set {0} Color Override", setNumber);
-
+            string displayPaletteSwitch = string.Format("Set {0} Switch to Palette (-1 to disable)", setNumber);
+             
             // Add our options.
             category.CreateEntry<Accesories>(identifier1, Accesories.Empty, display1);
             category.CreateEntry<Accesories>(identifier2, Accesories.Empty, display2);
@@ -152,6 +154,7 @@ namespace RCG2Mods
             // Advanced Options
             category.CreateEntry<string>(identifierTextOverride, string.Empty, displayIdentifierTextOverride, true);
             category.CreateEntry<Color>(identifierColorOverride, Color.clear, displayColorOverride, true);
+            category.CreateEntry<int>(identifierPaletteSwitch, -1, displayPaletteSwitch, true);
         } 
         #endregion
     }
@@ -406,6 +409,15 @@ namespace RCG2Mods
             // Set
             player.SetEquipment(0, slot1hash, iter);
             player.SetEquipment(1, slot2hash, iter);
+
+            string paletteSwitchEntry = string.Format("Set{0}SwitchPalette", index);
+            int paletteSwitchValue = category.category.GetEntry<int>(paletteSwitchEntry).Value;
+
+            if (paletteSwitchValue >= 0)
+            {
+                string name = (player.Player as PlayerEntity).Character.ClassName;
+                ColorTools.ChangeCharacterPalette(name, paletteSwitchValue);
+            }
         }
 
         /// <summary>
