@@ -221,8 +221,7 @@ namespace RCG2Mods
 
         #region Analog Stick Calibrations
         const float CounterDeadzone = .35f;
-        const float DifferenceThreshold = .15f;
-        const float MinThreshold = .35f;
+        const float MinThreshold = .5f;
         #endregion
 
         #region Functions
@@ -381,10 +380,10 @@ namespace RCG2Mods
                                         // Final checks include a minimum amount the stick is off center
                                         // and a comparison of where the stick was last frame.
 
-                                        float moveDifference = Math.Abs(check - prevCheck);
+                                        float finalPrev = Math.Abs(prevCheck);
                                         float finalCheck = Math.Abs(check);
 
-                                        if (finalCheck > MinThreshold && moveDifference >= DifferenceThreshold) // Hit
+                                        if (finalCheck > MinThreshold && finalPrev <= MinThreshold) // Hit
                                         {
                                             ActiveShortcuts.Add(shortcut);
                                         }
