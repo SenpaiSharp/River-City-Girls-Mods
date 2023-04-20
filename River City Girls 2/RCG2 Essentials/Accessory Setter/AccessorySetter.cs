@@ -111,7 +111,7 @@ namespace RCG2Mods
         public CategorySet(int player)
         {
             // Format based on player.
-            string display = (player == 0) ? "AccessorySetter.Sets" : string.Format("AccessorySetter.Player{0}.Sets", player);
+            string display = (player == 0) ? "Accessory Sets" : string.Format("Accessory Sets Player {0}", player);
             string identifier = (player == 0) ? "AccessorySetterPlayer1Sets" : string.Format("AccessorySetterPlayer{0}Sets", player);
 
             // Create
@@ -265,7 +265,7 @@ namespace RCG2Mods
                 Initialized = true;
 
                 // Create the main category.
-                mainCategory = MelonPreferences.CreateCategory("AccessorySetter");
+                mainCategory = MelonPreferences.CreateCategory("Accessory Setter Options");
                 mainCategory.SetFilePath("UserData/AccessorySetter.cfg");
 
                 // Set up our options.
