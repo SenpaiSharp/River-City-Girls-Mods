@@ -346,10 +346,10 @@ namespace RCG2Mods
         public override void OnInitializeMelon()
         {
             // Create Categories
-            var mainCategory = MelonPreferences.CreateCategory("PaletteSwapShortcuts");
+            var mainCategory = MelonPreferences.CreateCategory("PaletteSwapShortcuts", "Palettes Keyboard Shortcuts");
             mainCategory.SetFilePath("UserData/Shortcuts.cfg");
 
-            var controllerCategory = MelonPreferences.CreateCategory("PaletteSwapShortcutsControllers");
+            var controllerCategory = MelonPreferences.CreateCategory("Palettes Controller Shortcuts");
             controllerCategory.SetFilePath("UserData/Shortcuts.cfg", false);
 
             // Create Quick Slot Shortucts and preferences for Keyboard
