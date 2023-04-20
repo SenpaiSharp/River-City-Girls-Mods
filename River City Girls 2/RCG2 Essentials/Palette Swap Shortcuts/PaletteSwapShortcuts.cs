@@ -11,7 +11,7 @@ namespace RCG2Mods
     /// <summary>
     /// Shortcut for Palette Quick Slots (Player 1 Keyboard Only)
     /// </summary>
-    public class SlotShortcut: Shortcut
+    public class PaletteSlotShortcut: Shortcut
     {
         #region Fields
         public KeyIdentifiers key;
@@ -24,7 +24,7 @@ namespace RCG2Mods
         /// </summary>
         /// <param name="key">Key to trigger the shortcut.</param>
         /// <param name="index">Index of the palette array to switch to.</param>
-        public SlotShortcut(KeyIdentifiers key, int index)
+        public PaletteSlotShortcut(KeyIdentifiers key, int index)
             : base(0, ControllerType.Keyboard, (int)key, false)
         {
             this.key = key;
@@ -162,12 +162,12 @@ namespace RCG2Mods
     public class PlayerShortcuts
     {
         #region Formatted Strings (const)
-        const string identifier = "Player{0}{1}{2}";
+        const string identifier = "PalettePlayer{0}{1}{2}";
         const string display = "Player {0} Swap {1} {2}";
         const string warning = " (Does not apply to analog stick directions.)";
-        const string tapidentifier = "Player{0}DoubleTap";
+        const string tapidentifier = "PalettePlayer{0}DoubleTap";
         const string tapdisplay = "Require Double Tap for Player {0} {1}?";
-        const string highlowidentifier = "Player{0}{1}Custom{2}Palette";
+        const string highlowidentifier = "PalettePlayer{0}{1}Custom{2}Palette";
         const string highlowdisplay = "Custom Range for Palette Cycling: {0} Index Player {1} ({2}) (set to -1 to disable)";
         #endregion
 
@@ -334,7 +334,7 @@ namespace RCG2Mods
         #region Fields
         PlayerShortcuts keyboardPlayer;
         PlayerShortcuts[] gamepadPlayers = new PlayerShortcuts[4];
-        SlotShortcut[] slotShortcuts = new SlotShortcut[4];
+        PaletteSlotShortcut[] slotShortcuts = new PaletteSlotShortcut[4];
         MelonPreferences_Entry<KeyIdentifiers>[] slotKeys = new KeyEntry[4];
         MelonPreferences_Entry<int>[] slotIndexes = new MelonPreferences_Entry<int>[4];
         #endregion
@@ -349,15 +349,15 @@ namespace RCG2Mods
             var mainCategory = MelonPreferences.CreateCategory("PaletteSwapShortcuts");
             mainCategory.SetFilePath("UserData/Shortcuts.cfg");
 
-            var controllerCategory = MelonPreferences.CreateCategory("PaletteSwapShortcuts.Controllers");
-            controllerCategory.SetFilePath("UserData/Shortcuts.cfg");
+            var controllerCategory = MelonPreferences.CreateCategory("PaletteSwapShortcutsControllers");
+            controllerCategory.SetFilePath("UserData/Shortcuts.cfg", false);
 
             // Create Quick Slot Shortucts and preferences for Keyboard
             for (int i = 0; i < slotShortcuts.Length; i++)
             {
-                slotKeys[i] = mainCategory.CreateEntry<KeyIdentifiers>(string.Format("QuickSlotKey{0}", i), KeyIdentifiers.F1 + i, string.Format("Quick Slot {0} Key", i));
-                slotIndexes[i] = mainCategory.CreateEntry<int>(string.Format("QuickSlotIndex{0}", i), 0 + i, string.Format("Quick Slot {0} Palette Index", i));
-                slotShortcuts[i] = new SlotShortcut(slotKeys[i].Value, slotIndexes[i].Value);
+                slotKeys[i] = mainCategory.CreateEntry<KeyIdentifiers>(string.Format("PaletteQuickSlotKey{0}", i), KeyIdentifiers.F1 + i, string.Format("Quick Slot {0} Key", i));
+                slotIndexes[i] = mainCategory.CreateEntry<int>(string.Format("PaletteQuickSlotIndex{0}", i), 0 + i, string.Format("Quick Slot {0} Palette Index", i));
+                slotShortcuts[i] = new PaletteSlotShortcut(slotKeys[i].Value, slotIndexes[i].Value);
 
                 if (slotShortcuts[i].key != 0)
                 {
