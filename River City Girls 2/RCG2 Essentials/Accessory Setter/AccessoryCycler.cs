@@ -12,6 +12,7 @@ namespace RCG2Mods
     internal enum Accesories
     {
         Empty = 0,
+        Keep_Same = 1,
         Athletic_Bottom,
         Athletic_Top,
         Bomb_Bottom,
@@ -80,6 +81,7 @@ namespace RCG2Mods
                         return "Coach's Hat";
                     }
                 case Accesories.Empty:
+                case Accesories.Keep_Same:
                     {
                         return string.Empty;
                     }
@@ -124,7 +126,7 @@ namespace RCG2Mods
 
             for (int i = 0; i < setCount.Value; i++)
             {
-                CreateEntrySet(i + 1);
+                CreateEntrySet(i);
             }
         }
 
@@ -146,7 +148,7 @@ namespace RCG2Mods
             string displayIdentifierTextOverride = string.Format("Set {0} Text Override", setNumber);
             string displayColorOverride = string.Format("Set {0} Color Override", setNumber);
             string displayPaletteSwitch = string.Format("Set {0} Switch to Palette (-1 to disable)", setNumber);
-             
+
             // Add our options.
             category.CreateEntry<Accesories>(identifier1, Accesories.Empty, display1);
             category.CreateEntry<Accesories>(identifier2, Accesories.Empty, display2);
@@ -155,14 +157,14 @@ namespace RCG2Mods
             category.CreateEntry<string>(identifierTextOverride, string.Empty, displayIdentifierTextOverride, true);
             category.CreateEntry<Color>(identifierColorOverride, Color.clear, displayColorOverride, true);
             category.CreateEntry<int>(identifierPaletteSwitch, -1, displayPaletteSwitch, true);
-        } 
+        }
         #endregion
     }
-    
+
     /// <summary>
     /// Class that can Cycle through sets of accessories.
     /// </summary>
-    public class AccessoryCycler
+    public class AccessorySetter
     {
         #region Preferences
         static internal MelonPreferences_Category mainCategory;
@@ -171,7 +173,7 @@ namespace RCG2Mods
         static internal MelonPreferences_Entry<float> boxSize;
         static internal MelonPreferences_Entry<Color> textColor;
         static internal MelonPreferences_Entry<bool> force;
-        static internal MelonPreferences_Entry<bool> perPlayerSets; 
+        static internal MelonPreferences_Entry<bool> perPlayerSets;
 
         static CategorySet defaultSet;
         static CategorySet player2Set;
@@ -186,7 +188,7 @@ namespace RCG2Mods
         /// <summary>
         /// The current set each player is on.
         /// </summary>
-        static internal int[] SetIndexes = new int[4]; 
+        static internal int[] SetIndexes = new int[4];
 
         /// <summary>
         /// Quick reference for Accessories and their Hashes. Might change in future RCG2 updates. Not using an Enum because it affects sorting in MelonPreferencesManager.
@@ -194,6 +196,7 @@ namespace RCG2Mods
         static internal Dictionary<Accesories, int> valuePairs = new Dictionary<Accesories, int>
         {
             { Accesories.Empty, 0 },
+            { Accesories.Keep_Same, 1 },
             { Accesories.Athletic_Bottom , -1571602576 },
             { Accesories.Athletic_Top , -1880945162 },
             { Accesories.Bomb_Bottom , 885376415 },
@@ -314,7 +317,7 @@ namespace RCG2Mods
                 else
                 {
                     defaultSet = new CategorySet(0);
-                } 
+                }
             }
         }
         #endregion
@@ -326,29 +329,10 @@ namespace RCG2Mods
         /// <param name="iter">Main SimulationIterator</param>
         /// <param name="player">Player we are cycling.</param>
         static public void CyclePlayerAccessories(SimulationIteration iter, PlayerControllerEntity player, bool reverse = false)
-        {
-            // Figure out what player we're using.
-
+        { 
             int playerId = player.LocalID;
-            PlayerEntity entity = player.Player as PlayerEntity;
-            CategorySet category;
-            
-            if (perPlayer)
-            {
-                switch (playerId)
-                {
-                    default: category = defaultSet; break;
-                    case 2: category = player2Set; break;
-                    case 3: category = player3Set; break;
-                    case 4: category = player4set; break;
-                }
-            }
-            else
-            {
-                category = defaultSet;
-            }
-
-            // Advance our player's index, reset if necessary
+             
+            // Advance or reverse our player's index, reset if necessary
             if (!reverse)
             {
                 SetIndexes[playerId]++;
@@ -356,8 +340,8 @@ namespace RCG2Mods
                 if (SetIndexes[playerId] > defaultSet.setCount.Value)
                 {
                     // We use 1 because this info gets passed to the person playing and starting with 0 probably feel weird to them.
-                    SetIndexes[playerId] = 1;
-                } 
+                    SetIndexes[playerId] = 0;
+                }
             }
             else
             {
@@ -365,24 +349,50 @@ namespace RCG2Mods
 
                 if (SetIndexes[playerId] <= 0)
                 {
-                    // We use 1 because this info gets passed to the person playing and starting with 0 probably feel weird to them.
-                    SetIndexes[playerId] = SetIndexes.Length -1;
+                    SetIndexes[playerId] = defaultSet.setCount.Value - 1;
                 }
             }
+            
+            // Apply does the actual changing.
+            Apply(iter, player);
+        }
 
-            int index = SetIndexes[playerId];
-
-            // Get these once, use them potentially twice.
-            Accesories accessory1, accessory2;
-
-            // Cycle
-            Cycle(iter, player, category, index, out accessory1, out accessory2);
-
-            if (showText.Value)
+        /// <summary>
+        /// Get the player set based on player ID.
+        /// </summary>
+        /// <param name="playerId">ID of the player the set we want belongs to.</param>
+        /// <returns></returns>
+        private static CategorySet GetCategory(int playerId)
+        {
+            if (perPlayer)
             {
-                // Draw
-                MakeText(iter, entity, index, accessory1, accessory2, category);
+                switch (playerId)
+                {
+                    default: return defaultSet;
+                    case 2: return player2Set;
+                    case 3: return player3Set;
+                    case 4: return player4set;
+                }
             }
+            else // Only using default set for everyone.
+            {
+                return defaultSet;
+            }
+        }
+
+        /// <summary>
+        /// Set a player's accessories to the set by index.
+        /// </summary>
+        /// <param name="iter">Main Simulation</param>
+        /// <param name="player">Player who is being adjusted.</param>
+        /// <param name="setIndex">Index of the set that will be applied</param>
+        static public void SetPlayerAccessories(SimulationIteration iter, PlayerControllerEntity player, int setIndex)
+        {
+            // Set our index.
+            SetIndexes[player.LocalID] = Math.Abs(setIndex) % defaultSet.setCount.Value;
+
+            // Apply does the actual changing.
+            Apply(iter, player);
         }
 
         /// <summary>
@@ -394,8 +404,12 @@ namespace RCG2Mods
         /// <param name="index">The player's current index.</param>
         /// <param name="accessory1">Slot 1 Accessory</param>
         /// <param name="accessory2">Slot 2 Accessory</param>
-        private static void Cycle(SimulationIteration iter, PlayerControllerEntity player, CategorySet category, int index, out Accesories accessory1, out Accesories accessory2)
-        {   
+        private static void Apply(SimulationIteration iter, PlayerControllerEntity player)
+        {
+            CategorySet category = GetCategory(player.LocalID);
+
+            int index = SetIndexes[player.LocalID];
+
             // Get our SaveSlot Inventory
             SingletonHashedInventory inventory = player.SaveSlot.m_data.m_singletonInventory;
 
@@ -404,25 +418,28 @@ namespace RCG2Mods
             string slot2string = string.Format("Set{0}Slot{1}", index, 2);
 
             // Get our Accessories.
-            accessory1 = category.category.GetEntry<Accesories>(slot1string).Value;
-            accessory2 = category.category.GetEntry<Accesories>(slot2string).Value;
+            Accesories accessory1 = category.category.GetEntry<Accesories>(slot1string).Value;
+            Accesories accessory2 = category.category.GetEntry<Accesories>(slot2string).Value;
 
             // Get their Hashes.
             int slot1hash = valuePairs[accessory1];
             int slot2hash = valuePairs[accessory2];
 
             // Determine if we have those accessories or use them anyway if being forced to.
-            slot1hash = (force.Value || inventory.Contains(slot1hash)) ? slot1hash : 0;
-            slot2hash = (force.Value || inventory.Contains(slot2hash)) ? slot2hash : 0;
+            slot1hash = (accessory1 == Accesories.Keep_Same || force.Value || inventory.Contains(slot1hash)) ? slot1hash : 0;
+            slot2hash = (accessory2 == Accesories.Keep_Same || force.Value || inventory.Contains(slot2hash)) ? slot2hash : 0;
 
             // Set our out going accessories to Empty if necessary.
             if (slot1hash == 0) accessory1 = Accesories.Empty;
             if (slot2hash == 0) accessory2 = Accesories.Empty;
 
-            // Set
-            player.SetEquipment(0, slot1hash, iter);
-            player.SetEquipment(1, slot2hash, iter);
-
+            // Set, unless the we're keeping the same.
+            if (accessory1 != Accesories.Keep_Same)
+                player.SetEquipment(0, slot1hash, iter);
+            if (accessory2 != Accesories.Keep_Same)
+                player.SetEquipment(1, slot2hash, iter);
+            
+            // Switch palette if necessary.
             string paletteSwitchEntry = string.Format("Set{0}SwitchPalette", index);
             int paletteSwitchValue = category.category.GetEntry<int>(paletteSwitchEntry).Value;
 
@@ -430,6 +447,13 @@ namespace RCG2Mods
             {
                 string name = (player.Player as PlayerEntity).Character.ClassName;
                 ColorTools.ChangeCharacterPalette(name, paletteSwitchValue);
+            }
+
+            // Draw text if necessary.
+            if (showText.Value)
+            {
+                // Draw
+                MakeText(iter, player.Player as PlayerEntity, index, accessory1, accessory2, category);
             }
         }
 
@@ -453,14 +477,23 @@ namespace RCG2Mods
 
             if (string.IsNullOrEmpty(overrideText)) // Draw the names of both items in succession.
             {
-                TextLib.PopText(iter, entity, accessory1.GetName(), color, textSize.Value, boxSize.Value);
-                TextLib.PopText(iter, entity, accessory2.GetName(), color, textSize.Value, boxSize.Value);
+                string name1 = accessory1.GetName();
+                string name2 = accessory2.GetName();
+
+                if (name1.Length > 0)
+                {
+                    TextLib.PopText(iter, entity, accessory1.GetName(), color, textSize.Value, boxSize.Value);
+                }
+                if (name2.Length > 0)
+                {
+                    TextLib.PopText(iter, entity, accessory2.GetName(), color, textSize.Value, boxSize.Value);
+                }
             }
             else // draw the override
             {
                 TextLib.PopText(iter, entity, overrideText, color, textSize.Value, boxSize.Value);
             }
-        } 
+        }
         #endregion
     }
 }
