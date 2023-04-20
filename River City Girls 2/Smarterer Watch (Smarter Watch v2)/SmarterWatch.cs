@@ -32,7 +32,7 @@ namespace RCG2Mods
         static internal MelonPreferences_Entry<bool> IncludeMusicPlayer;
         public override void OnInitializeMelon()
         {
-            prefCategory = MelonPreferences.CreateCategory("SmarterWatch");
+            prefCategory = MelonPreferences.CreateCategory("SmarterWatch", "Smarter Watch");
             prefCategory.SetFilePath("UserData/SmarterWatch.cfg");
             IncludeMusicPlayer = prefCategory.CreateEntry<bool>(
                 identifier: "EquipMusicPlayer",
@@ -192,8 +192,6 @@ namespace RCG2Mods
             PreFinalizerHook.Subscribe(SmarterWatch.Unequip);
             return true;
         }
-    }
-
-  
+    } 
     #endregion
 }
