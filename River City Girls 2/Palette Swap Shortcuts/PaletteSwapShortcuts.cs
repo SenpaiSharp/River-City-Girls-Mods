@@ -14,7 +14,6 @@ namespace RCG2Mods
     public class PaletteSlotShortcut: Shortcut
     {
         #region Fields
-        public KeyIdentifiers key;
         public int index;
         #endregion
 
@@ -27,7 +26,6 @@ namespace RCG2Mods
         public PaletteSlotShortcut(KeyIdentifiers key, int index)
             : base(0, ControllerType.Keyboard, (int)key, false)
         {
-            this.key = key;
             this.index = index;
         }
         #endregion
@@ -131,6 +129,9 @@ namespace RCG2Mods
         }
     }
 
+    /// <summary>
+    /// Shortcut for cycling backward, supporting low and high array ranges.
+    /// </summary>
     public class CycleBackwardShortcut : CycleShortcut
     {
         /// <summary>
@@ -359,7 +360,7 @@ namespace RCG2Mods
                 slotIndexes[i] = mainCategory.CreateEntry<int>(string.Format("PaletteQuickSlotIndex{0}", i), 0 + i, string.Format("Quick Slot {0} Palette Index", i));
                 slotShortcuts[i] = new PaletteSlotShortcut(slotKeys[i].Value, slotIndexes[i].Value);
 
-                if (slotShortcuts[i].key != 0)
+                if (slotShortcuts[i].ElementIdentifierID != 0)
                 {
                     ShortcutsManager.AddShortcut(slotShortcuts[i]);
                 }
@@ -404,10 +405,10 @@ namespace RCG2Mods
             // Refresh Keyboard Quick Keys
             for (int i = 0; i < slotShortcuts.Length; i++)
             {
-                slotShortcuts[i].key = slotKeys[i].Value;
+                slotShortcuts[i].ElementIdentifierID = (int)slotKeys[i].Value;
                 slotShortcuts[i].index = slotIndexes[i].Value;
 
-                if (slotShortcuts[i].key != 0)
+                if (slotShortcuts[i].ElementIdentifierID != 0)
                 {
                     ShortcutsManager.AddShortcut(slotShortcuts[i]);
                 }
