@@ -230,7 +230,7 @@ namespace RCG2Mods
                 // Get all files from our character's folder.
                 string directory = string.Format("./UserData/Palettes/{0}", name);
                 if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-                List<string> created = Directory.GetFiles(directory, "*.png").ToList();
+                List<string> created = Directory.GetFiles(directory, "*.png", SearchOption.AllDirectories).ToList();
                 created.Sort();
 
                 // create and add from each file.
