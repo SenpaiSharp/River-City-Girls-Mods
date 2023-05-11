@@ -2,6 +2,7 @@
 using HarmonyLib;
 using System.Reflection; 
 using Tools.BinaryRollback;
+using System.Collections.Generic;
 
 namespace RCG2Mods
 {
@@ -14,6 +15,7 @@ namespace RCG2Mods
         internal const string mainSimTag = "MainSimulation";
         internal static bool initialized;
         internal static Action<SimulationIteration> prefinalizers;
+        internal static List<Action<SimulationIteration>> nextFrameFinalizers;
         #endregion
 
         #region Construction and Initializing
@@ -24,12 +26,14 @@ namespace RCG2Mods
         {
             //Cheaper than an anonymous () every frame.
             prefinalizers = EmptyCall;
+
+            nextFrameFinalizers = new List<Action<SimulationIteration>>();
         }
 
         /// <summary>
         /// Checks if ran once and if not, runs our Patch.
         /// </summary>
-        internal static void Initialize()
+        public static void Initialize()
         {
             if (initialized)
             {
@@ -63,7 +67,7 @@ namespace RCG2Mods
             PatchProcessor patchProcessor = harmony.CreateProcessor(finalizeMethod);
             HarmonyMethod harmonyMethod = new HarmonyMethod(typeof(PreFinalizerHook), "PreFinalize");
             patchProcessor.AddPrefix(harmonyMethod);
-            patchProcessor.Patch();
+            patchProcessor.Patch(); 
         }
         #endregion
 
@@ -74,14 +78,16 @@ namespace RCG2Mods
         /// <param name="action">The () to be performed.</param>
         public static void Subscribe(Action<SimulationIteration> action)
         {
-            // Make sure we are initialized.
-            Initialize();
-
             // Remove the action first. This will do nothing if it's not already there but will ensure we only have it once if it is.
             prefinalizers -= action;
 
             // Add
             prefinalizers += action;
+        }
+
+        public static void SubscribeSubsequentFrame(Action<SimulationIteration> action)
+        {
+            nextFrameFinalizers.Add(action);
         }
 
         /// <summary>
@@ -105,6 +111,15 @@ namespace RCG2Mods
 
                 // Reset for next frame;
                 prefinalizers = EmptyCall;
+
+                if (nextFrameFinalizers.Count > 0)
+                {
+                    for (int i = 0; i < nextFrameFinalizers.Count; i++)
+                    {
+                        Subscribe(nextFrameFinalizers[i]);
+                    }
+                    nextFrameFinalizers.Clear();
+                }
             }
 
             // Done
