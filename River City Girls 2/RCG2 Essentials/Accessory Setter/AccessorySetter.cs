@@ -347,7 +347,7 @@ namespace RCG2Mods
             {
                 SetIndexes[playerId]--;
 
-                if (SetIndexes[playerId] <= 0)
+                if (SetIndexes[playerId] < 0)
                 {
                     SetIndexes[playerId] = defaultSet.setCount.Value - 1;
                 }
