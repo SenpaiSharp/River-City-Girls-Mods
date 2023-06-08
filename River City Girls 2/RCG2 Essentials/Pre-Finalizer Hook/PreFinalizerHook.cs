@@ -12,7 +12,9 @@ namespace RCG2Mods
     public static class PreFinalizerHook
     {
         #region Fields
-        internal const string mainSimTag = "MainSimulation";
+        internal const string metaIterTag = "Meta Iterator";
+        internal const string aIterTag = "IteratorA";
+        internal const string bIterTag = "IteratorB";
         internal static bool initialized;
         internal static Action<SimulationIteration> prefinalizers;
         internal static List<Action<SimulationIteration>> nextFrameFinalizers;
@@ -39,9 +41,10 @@ namespace RCG2Mods
             {
                 return;
             }
-            initialized = true;
 
             PatchFinalize();
+
+            initialized = true;
         }
 
         /// <summary>
@@ -95,7 +98,9 @@ namespace RCG2Mods
         /// </summary>
         /// <param name="iter"></param>
         internal static void EmptyCall(SimulationIteration iter) { }
+        #endregion
 
+        #region Patch
         /// <summary>
         /// Runs just before Finalize is called and Invokes any subscribers.
         /// </summary>
@@ -103,28 +108,39 @@ namespace RCG2Mods
         /// <returns>Always returns true, so that Finalize will run.</returns>
         private static bool PreFinalize(SimulationIteration __instance)
         {
-            // Check if this is the m_iterator, it is the only one we care about.
-            if (__instance.IterationTag == mainSimTag)
+            switch (__instance.IterationTag)
             {
-                // Invoke
-                prefinalizers.Invoke(__instance);
-
-                // Reset for next frame;
-                prefinalizers = EmptyCall;
-
-                if (nextFrameFinalizers.Count > 0)
-                {
-                    for (int i = 0; i < nextFrameFinalizers.Count; i++)
+                case aIterTag:
+                case bIterTag:
                     {
-                        Subscribe(nextFrameFinalizers[i]);
+                        //Invoke
+                        prefinalizers.Invoke(__instance);
+
+                        // Reset for next frame;
+                        prefinalizers = EmptyCall;
+
+                        // Do any necessary subcribing for the next frame.
+                        if (nextFrameFinalizers.Count > 0)
+                        {
+                            for (int i = 0; i < nextFrameFinalizers.Count; i++)
+                            {
+                                Subscribe(nextFrameFinalizers[i]);
+                            }
+
+                            nextFrameFinalizers.Clear();
+                        }
+                        break;
                     }
-                    nextFrameFinalizers.Clear();
-                }
+                case metaIterTag:
+                    {
+                        //Not currently supported, not sure if it will ever need to be?
+                        break;
+                    }
             }
 
             // Done
             return true;
-        } 
+        }  
         #endregion
     }
 }
