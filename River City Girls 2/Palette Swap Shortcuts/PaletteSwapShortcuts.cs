@@ -38,7 +38,7 @@ namespace RCG2Mods
         /// <param name="player">Controlling player of the character whose palette is being changed.</param>
         public override void Call(SimulationIteration simulation, PlayerControllerEntity player)
         {
-            ColorTools.ChangeCharacterPalette((player.Player as PlayerEntity).ClassName, index);
+            ColorTools.ChangeCharacterPalette((player.Player(simulation) as PlayerEntity).ClassName, index);
         } 
         #endregion
     }
@@ -85,7 +85,7 @@ namespace RCG2Mods
         public override void Call(SimulationIteration simulation, PlayerControllerEntity entity)
         {
             // Get player entity.
-            var player = entity.Player as PlayerEntity;
+            var player = entity.Player(simulation) as PlayerEntity;
 
             if (player != null) // Pass name to cycle.
             {
@@ -381,6 +381,10 @@ namespace RCG2Mods
             for (int i = 0; i < mainCategory.Entries.Count; i++)
             {
                 mainCategory.Entries[i].OnEntryValueChangedUntyped.Subscribe(UpdateShortcuts);
+            }
+            for (int i = 0; i < controllerCategory.Entries.Count; i++)
+            {
+                controllerCategory.Entries[i].OnEntryValueChangedUntyped.Subscribe(UpdateShortcuts);
             }
         }
         #endregion
