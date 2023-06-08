@@ -32,7 +32,7 @@ namespace RCG2Mods
         public override void Call(SimulationIteration simulation, PlayerControllerEntity entity)
         {
             // Get the current player entity.
-            var player = entity.Player as PlayerEntity;
+            var player = entity.Player(simulation) as PlayerEntity;
 
             if (player != null)
             {
@@ -45,7 +45,7 @@ namespace RCG2Mods
                     player.Character.m_allVariations[0] = Palette.CreateTextureFromFile(path, player.ClassName);
 
                     // Give a notification that this worked, if the change is not immedietly noticable.
-                    TextLib.PopText(simulation, entity.Player as CombatEntity, "Palette Refreshed", Color.yellow, 30);
+                    TextLib.PopText(simulation, entity.Player(simulation) as CombatEntity, "Palette Refreshed", Color.yellow, 30);
                 }
                 else // create the file.
                 {
@@ -64,7 +64,7 @@ namespace RCG2Mods
 
                     // Give a notification that this worked.
                     // TODO: Technically, it might not have!
-                    TextLib.PopText(simulation, entity.Player as CombatEntity, path + "-LiveEdit.png Created", Color.yellow, 30);
+                    TextLib.PopText(simulation, entity.Player(simulation) as CombatEntity, path + "-LiveEdit.png Created", Color.yellow, 30);
                 }
             }
         }
