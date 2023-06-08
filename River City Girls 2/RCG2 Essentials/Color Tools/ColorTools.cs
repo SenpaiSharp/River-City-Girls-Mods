@@ -8,6 +8,7 @@ using Tools.BinaryRollback;
 using HarmonyLib;
 using RCG.Rollback.Mono;
 using System.IO;
+using RCG.UI.Screens.Widgets;
 using Harmonyc = HarmonyLib.Harmony;
 
 namespace RCG2Mods
@@ -130,9 +131,9 @@ namespace RCG2Mods
     {
         #region Static Fields
         /// <summary>
-        /// Character Descriptions for each character. They are added in as early as possible.
+        /// Character Descriptions for each character.
         /// </summary>
-        static internal Dictionary<string, CharacterDescription> Descriptions;
+        static internal Dictionary<string, List<CharacterDescription>> Descriptions;
         /// <summary>
         /// A dollection of palettes for each character.
         /// </summary>
@@ -176,7 +177,7 @@ namespace RCG2Mods
             // Initialize
             Instance = this;
             harmony = new Harmonyc("RCG2Mods.ColorTools");
-            Descriptions = new Dictionary<string, CharacterDescription>();
+            Descriptions = new Dictionary<string, List<CharacterDescription>>();
 
             // Load
             LoadPreferences();
@@ -184,7 +185,7 @@ namespace RCG2Mods
 
             // Patch
             PatchCreate();
-            PatchFinalizeLevelLoad();
+            PatchSelectSaveFile();
         }
 
         /// <summary>
@@ -279,30 +280,27 @@ namespace RCG2Mods
         /// <summary>
         /// Patches in the HookAll method to HideOutSetup.FinalizeLevelLoad.
         /// </summary>
-        private void PatchFinalizeLevelLoad()
+        private void PatchSelectSaveFile()
         {
-            var finalize = AccessTools.Method(
-                typeof(HideoutSetup),
-                "FinalizeLevelLoad",
-                new Type[] { typeof(SimulationIteration) });
+            var onselect = AccessTools.Method( typeof(SaveFile_SaveSlot), "SelectSaveFile");
 
-            var hook = AccessTools.Method(this.GetType(), "HookAll");
+            var hook = AccessTools.Method(this.GetType(), "ClearDictionaries");
 
-            harmony.Patch(finalize, postfix: new HarmonyMethod(hook));
-        }
-
-        /// <summary>
-        /// Unpatches our hook methods
-        /// </summary>
-        internal static void Unpatch()
-        {
-            Instance.harmony.UnpatchSelf();
+            harmony.Patch(onselect, postfix: new HarmonyMethod(hook));
         }
         #endregion
 
         #region Patches
         /// <summary>
-        /// Hooks a PlayerEntity one its creation.
+        /// Resets our descriptions for a new game, which is necessary now in RCG2 1.0.2. thanks.
+        /// </summary>
+        private static void ClearDictionaries()
+        {
+            Descriptions.Clear();
+        }
+
+        /// <summary>
+        /// Hooks a PlayerEntity on its creation.
         /// </summary>
         /// <param name="__result">the entity just created</param>
         /// <param name="description">The character description (the part we actually want).</param>
@@ -314,11 +312,18 @@ namespace RCG2Mods
 
             if (!Descriptions.ContainsKey(name))
             {
-                //hook
-                Descriptions.Add(name, description);
-                //set our palette list so that 0 is the default texture.
-                Palettes[name][0] = Palette.CreatePalette(Descriptions[name].m_allVariations[0], "DefaultPalette");
+                //Create an entry that will hold our descriptions for htis character
+                Descriptions.Add(name, new List<CharacterDescription>() { description });
+
+                //Set our palette list so that 0 is the default texture.
+                Palettes[name][0] = Palette.CreatePalette(Descriptions[name][0].m_allVariations[0], "DefaultPalette");
             }
+
+            // Avoid Duplications.
+            Descriptions[name].Remove(description);
+
+            // Add this description.
+            Descriptions[name].Add(description);
 
             // Refresh colors.
             RefreshColors();
@@ -326,15 +331,6 @@ namespace RCG2Mods
             // exit
             return __result;
         }
-
-        /// <summary>
-        /// Patch that let's us get all the correct CharacterDescription instances.
-        /// </summary>
-        private static void HookAll()
-        {
-            // Fill the dictionary, on the next frame. We need to skip the current frame due to weirdness involving the CharacterDescription.
-            PreFinalizerHook.SubscribeSubsequentFrame(FillDictionary);
-        } 
         #endregion
 
         #region Public Functions
@@ -456,15 +452,21 @@ namespace RCG2Mods
             {
                 string name = string.Format("{0}Index", keys[i]);
                 var entry = Preferences.GetEntry<int>(name);
-                CharacterDescription character = Descriptions[keys[i]];
+
                 List<Palette> palettes = Palettes[keys[i]];
 
-                // Get our real index, using a modolo to avoid crashes on errant changes.
-                int index = entry.Value % Palettes[keys[i]].Count;
+                List<CharacterDescription> descriptions = Descriptions[keys[i]];
 
-                // Set the character's default to our new one.
-                character.m_allVariations[0] = palettes[index].Texture;
-            }
+                // Update all descriptions that have been loaded. It's multiple per character to avoid any unpredictable desyncing of our character and the instance of their description, which happens a lot more than I'd like (0).
+                for (int c = 0; c < descriptions.Count; c++)
+                {
+                    // Get our real index, using a modolo to avoid crashes on errant changes.
+                    int index = entry.Value % Palettes[keys[i]].Count;
+
+                    // Set the character's default to our new one.
+                    descriptions[c].m_allVariations[0] = palettes[index].Texture;
+                }    
+            } 
         }
         #endregion
 
@@ -483,47 +485,12 @@ namespace RCG2Mods
                 {
                     Preferences.GetEntry<int>(CharacterNames[i] + "Index").Value = 0;
                 }
-
                 return;
             }
 
             // Refresh colors on frame.
             RefreshColors();
         }
-
-        /// <summary>
-        /// Gets all the correct CharacterDescriptions.
-        /// </summary>
-        /// <param name="simulationIteration">Main Iteration</param>
-        private static void FillDictionary(SimulationIteration simulationIteration)
-        {
-            // Get all the player entities.
-            var entities = new List<PlayerEntity>();
-            simulationIteration.GetEntities<PlayerEntity>(entities);
-
-            // Hook
-            for (int i = 0; i < entities.Count; i++)
-            {
-                CharacterDescription character = entities[i].Character;
-                string key = character.name.Replace("Description", "");
-
-                // Add the key or if it's already there, replace it. It's possible the one we have isn't the real one if the character hasn't been controlled by a player yet.
-                if (Descriptions.ContainsKey(key))
-                {
-                    Descriptions[key] = character;
-                }
-                else
-                {
-                    Descriptions.Add(key, character);
-                }
-            }
-
-            // Refresh colors on the next finalize.
-            RefreshColors();
-
-            // If we have all our descriptions (99% of the time we will), go ahead and unpatch these checks.
-            if (Descriptions.Keys.Count >= 6) Unpatch();
-        } 
         #endregion
     }
 
