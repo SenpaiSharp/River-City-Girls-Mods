@@ -252,12 +252,12 @@ namespace RCG2Mods
         /// Checks each shortcut to see if it's been activated the current game frame.
         /// </summary>
         public override void OnUpdate()
-        {
+        { 
             if (Shortcuts.Count > 0)
             {
                 // Get active players.
                 var players = ReInput.players.GetPlayers(false);
-
+                
                 for (int i = 0; i < players.Count; i++)
                 {
                     var player = players[i];
@@ -414,7 +414,7 @@ namespace RCG2Mods
 
                     // Let the game know if we need to call any shortcuts at the end of this frame.
                     if (ActiveShortcuts.Count > 0)
-                    {
+                    { 
                         PreFinalizerHook.Subscribe(CallShortcuts);
                     }
                 }
@@ -428,16 +428,17 @@ namespace RCG2Mods
         public void CallShortcuts(SimulationIteration iteration)
         {
             // Get our controlled characters.
-            List<PlayerControllerEntity> playerControllerEntities = new List<PlayerControllerEntity>();
-            iteration.GetEntities<PlayerControllerEntity>(playerControllerEntities);
-
+            IRestrictedList<PlayerControllerEntity> playerControllerEntities;
+            //List<PlayerControllerEntity> playerControllerEntities = new List<PlayerControllerEntity>();
+            iteration.GetEntities<PlayerControllerEntity>(out playerControllerEntities);
+            
             // pair the characters with their shortcuts.
             for (int s = 0; s < ActiveShortcuts.Count; s++)
             {
-                for (int p = 0; p < playerControllerEntities.Count; p++)
+                for (int p = 0; p < playerControllerEntities.RestrictedCount; p++)
                 {
                     if (playerControllerEntities[p].LocalID == ActiveShortcuts[s].PlayerNum)
-                    {
+                    {  
                         // Call and move to the next shortcut.
                         ActiveShortcuts[s].Call(iteration, playerControllerEntities[p]);
                         break;
