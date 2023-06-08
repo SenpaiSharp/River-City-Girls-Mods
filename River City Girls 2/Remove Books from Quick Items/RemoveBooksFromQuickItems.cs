@@ -105,7 +105,7 @@ namespace RCG2Mods
     /// Harmony Game_Player_QuickItem.AnimateCycle Patch that controls when this mod should be active.
     /// </summary>
     [HarmonyPatch(typeof(UI_Game_Player_QuickItem))]
-    [HarmonyPatch("AnimateCycle", typeof(bool), typeof(PlayerControllerEntity))]
+    [HarmonyPatch("AnimateCycle", typeof(SimulationIteration), typeof(bool), typeof(PlayerControllerEntity))]
     class AnimateCyclePatch1
     {
         #region Harmony Fixes
