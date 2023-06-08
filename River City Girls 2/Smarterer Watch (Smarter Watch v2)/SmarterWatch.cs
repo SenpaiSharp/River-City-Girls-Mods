@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using HarmonyLib;
 using MelonLoader;
 using Tools.BinaryRollback;
-using Tools.BinaryPackets;
 using RCG.Rollback.Components;
 using PropertySerializer;
 using RCG.UI.Screens;
@@ -17,11 +16,6 @@ namespace RCG2Mods
     /// </summary>
     internal class SmarterWatch : MelonMod
     {
-        #region DataMap Hash Values (May change with RCG2 updates)
-        internal const int SmartWatchHash = -847583387;
-        internal const int MusicPlayerHash = 945610029;
-        #endregion
-
         #region Player Fields
         static internal List<(int Slot1, int Slot2)> EquipedItems;
         static internal SaveSlotEntity SaveBoughtOn;
@@ -49,18 +43,18 @@ namespace RCG2Mods
         static internal void EquipAfterBuy(SimulationIteration iter)
         {
             // Get the active players.
-            var players = new List<PlayerControllerEntity>();
-            iter.GetEntities<PlayerControllerEntity>(players);
+            Tools.BinaryRollback.IRestrictedList<PlayerControllerEntity> players;
+            iter.GetEntities<PlayerControllerEntity>(out players);
 
             // Check each player to see if they are part of the Save Slot that bought the watch.
             // They might not be if this is used online. If it even works online!
             //TODO: Find out if this works online.
-            for (int i = 0; i < players.Count; i++)
+            for (int i = 0; i < players.RestrictedCount; i++)
             {
-                if (SaveBoughtOn == players[i].SaveSlot)
+                if (SaveBoughtOn == players[i].SaveSlot(iter))
                 {
                     // Put the Watch in the first slot.
-                    players[i].SetEquipment(0, SmartWatchHash, iter);
+                    AccessorySetter.Set(iter, players[i], Accesories.Smart_Watch, Accesories.Keep_Same);
                 }
             }
             // No longer needed, null just to be safe since it's a static field that.  
@@ -76,10 +70,10 @@ namespace RCG2Mods
             // Stores the equipment worn on entering the store.
             SmarterWatch.EquipedItems = new List<(int Slot1, int Slot2)>();
 
-            var players = new List<PlayerControllerEntity>();
-            iter.GetEntities<PlayerControllerEntity>(players);
+            IRestrictedList<PlayerControllerEntity> players;
+            iter.GetEntities<PlayerControllerEntity>(out players);
 
-            for (int i = 0; i < players.Count; i++)
+            for (int i = 0; i < players.RestrictedCount; i++)
             {
                 var playerData = players[i].m_playerData;
 
@@ -88,15 +82,23 @@ namespace RCG2Mods
 
                 // We set either the Smart Watch/Music Player or empty each slot.
                 // This keeps things simple and ensures we don't end up with edge cases where two of the same items end up equiped.
-                var inventory = players[i].SaveSlot.m_data.m_singletonInventory;
+                var inventory = players[i].SaveSlot(iter).m_data.m_singletonInventory;
 
-                int firstSlot = inventory.Contains(SmarterWatch.SmartWatchHash) ? SmarterWatch.SmartWatchHash : 0;
-                bool useMusicPlayer = (SmarterWatch.IncludeMusicPlayer.Value && inventory.Contains(SmarterWatch.MusicPlayerHash));
-                int secondSlot = useMusicPlayer ? SmarterWatch.MusicPlayerHash : 0;
+                Accesories firstSlot = inventory.Contains(AccessorySetter.Hashes[Accesories.Smart_Watch]) ? Accesories.Smart_Watch : Accesories.Keep_Same;
+                bool useMusicPlayer = (SmarterWatch.IncludeMusicPlayer.Value && inventory.Contains(AccessorySetter.Hashes[Accesories.Music_Player]));
+                Accesories secondSlot = useMusicPlayer ? Accesories.Music_Player : Accesories.Keep_Same;
+
+                // Edge Case: Music Player option is disabled but it is naturally equipped in slot 1. We need to move our watch to slot 2 instead.
+                if (!useMusicPlayer 
+                    && firstSlot == Accesories.Smart_Watch 
+                    && playerData.m_equipmentOne == AccessorySetter.Hashes[Accesories.Music_Player] )
+                {
+                    firstSlot = Accesories.Keep_Same;
+                    secondSlot = Accesories.Smart_Watch;
+                }
 
                 // Set
-                players[i].SetEquipment(0, firstSlot, iter);
-                players[i].SetEquipment(1, secondSlot, iter);
+                AccessorySetter.Set(iter, players[i], firstSlot, secondSlot);
             }
         }
 
@@ -106,12 +108,12 @@ namespace RCG2Mods
         /// <param name="iter">Main SimulatorIterator</param>
         static internal void Unequip(SimulationIteration iter)
         {
-            var players = new List<PlayerControllerEntity>();
+            IRestrictedList<PlayerControllerEntity> players;
 
-            iter.GetEntities<PlayerControllerEntity>(players);
+            iter.GetEntities<PlayerControllerEntity>(out players);
 
             // Reequip what each player had on entering the store.
-            for (int i = 0; i < players.Count; i++)
+            for (int i = 0; i < players.RestrictedCount; i++)
             {
                 players[i].SetEquipment(0, SmarterWatch.EquipedItems[i].Slot1, iter);
                 players[i].SetEquipment(1, SmarterWatch.EquipedItems[i].Slot2, iter);
@@ -137,21 +139,22 @@ namespace RCG2Mods
         /// <param name="__instance">The item being bought.</param>
         /// <param name="ent">The player buying it.</param>
         /// <returns>Always returns true to allow the method to continue.</returns>
-        static bool Prefix(EquipmentData __instance, PlayerEntity ent)
+        static bool Prefix(EquipmentData __instance,  SimulationIteration iteration, PlayerEntity ent)
         {
             if (ent == null)
             {
                 return true;
             }
-
-            if (__instance.NameHash == SmarterWatch.SmartWatchHash)
+            
+            if (__instance.NameHash == AccessorySetter.Hashes[Accesories.Smart_Watch])
             {
                 PreFinalizerHook.Subscribe(SmarterWatch.EquipAfterBuy);
 
                 // Get the save slot of the current player, this might (as in, I don't know) factor into online play.
-                var player = ent.Controller as PlayerControllerEntity;
-                SmarterWatch.SaveBoughtOn = player.SaveSlot;
+                var player = ent.Controller(iteration) as PlayerControllerEntity;
+                SmarterWatch.SaveBoughtOn = player.SaveSlot(iteration);
             }
+            
 
             //Continue
             return true;
